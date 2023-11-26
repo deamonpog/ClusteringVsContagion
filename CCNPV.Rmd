@@ -1,0 +1,2510 @@
+---
+title: "CCNPV"
+author: "Xiaoxia Champon"
+date: "2023-08-10"
+output: html_document
+---
+#Notes from Chathura 8/9/2023
+#relationship between CC and NPV
+# CC vary based on the network type
+# NPV vary based on the model
+# Hypothesis: relationship between CC and NPV might be different when the network type/ model type changes
+
+#NPV is affected by the Clustering Coefficient (CC), for all 3 models, for all 3 networks. The CC’s effect on NPV is uniquely different between ICM, LFTM, and LATM The CC’s effect on NPV is uniquely different between SF, SW, R networks
+
+#Net Present Value
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#read the data CCDiffusion_3.csv
+```{r}
+cc_diffusion=read.csv("SyntheticData_CCDiffusion_OrientedParams01.csv")
+```
+
+#check the basic information
+```{r}
+head(cc_diffusion)
+```
+
+```{r}
+table(cc_diffusion$Model)/sum(table(cc_diffusion$Model))
+```
+
+```{r}
+table(cc_diffusion$NetType)/sum(table(cc_diffusion$NetType))
+```
+
+
+
+```{r}
+range(cc_diffusion$NetParam)
+```
+
+
+#{'ICM': array([0.05, 0.1 , 0.15, 0.2 , 0.25, 0.3 , 0.35, 0.4 , 0.45, 0.5 , 0.55,
+#        0.6 , 0.65, 0.7 , 0.75, 0.8 , 0.85, 0.9 , 0.95]),
+# 'LFTM': array([0.05, 0.1 , 0.15, 0.2 , 0.25, 0.3 , 0.35, 0.4 , 0.45, 0.5 , 0.55,
+#        0.6 , 0.65, 0.7 , 0.75, 0.8 , 0.85, 0.9 , 0.95]),
+# 'LATM': array([1, 2, 3, 4, 5, 6, 7, 8, 9])}
+
+#dimension of cc_diffusion 
+```{r}
+dim(cc_diffusion)
+```
+
+#reference for zero inflated+ normal distribution
+#https://stackoverflow.com/questions/60408826/how-to-handle-entries-of-zero-in-an-otherwise-normal-distribution
+
+#check the distribution of the response NPV
+```{r}
+library(ggplot2)
+hist_npv = ggplot(cc_diffusion,aes(x=NPV))+
+  geom_histogram()+
+  theme(text = element_text(size=20))+
+  xlab("NPV")
+
+
+```
+#count the number of the observations that NPV is 0
+```{r}
+sum(cc_diffusion$NPV==0)
+```
+#check the percentage of NPV is 0
+```{r}
+sum(cc_diffusion$NPV==0)/dim(cc_diffusion)[1]
+```
+
+
+#count the observations by model type
+
+```{r}
+table(cc_diffusion$Model)/sum(table(cc_diffusion$Model))
+```
+
+
+#viualize the model parameter by models
+```{r}
+library(dplyr)
+library(ggplot2)
+p<-ggplot(cc_diffusion, aes(x=ModelParam))+
+  geom_histogram()+
+  facet_grid(Model ~ .)+ theme(text = element_text(size = 20)) 
+p
+```
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+p01<-ggplot(cc_diffusion, aes(x=ModelParam01))+
+  geom_histogram()+
+  facet_grid(Model ~ .)+ theme(text = element_text(size = 20)) 
+p01
+```
+
+
+
+
+
+#count the network types
+```{r}
+table(cc_diffusion$NetType)/sum(table(cc_diffusion$NetType))
+```
+
+```{r}
+cc_diffusion$NetType[cc_diffusion$NetType == "RANDOM"] <- 'R'
+#cc_n1000$NetType[cc_n1000$NetType == "SMALLWORLD"] <- 'SR'
+cc_diffusion$NetType[cc_diffusion$NetType == "BARABASI"] <- 'SF'
+cc_diffusion$NetType[cc_diffusion$NetType == "SMALLWORLD"] <- 'SW'
+```
+
+
+
+#Visualize the relationship between the original scale of clustering coefficient and NPV by network types
+
+```{r}
+
+ggplot(cc_diffusion, aes(x=CC_mean, y=NPV,fill=NetType,color=NetType))+
+  geom_point()+xlab("Clustering Coefficient")+
+  facet_wrap(~NetType)+ theme(text = element_text(size = 20)) 
+```
+#Visualize the relationship between the original scale of clustering coefficient and NPV by model types
+```{r}
+ggplot(cc_diffusion, aes(x=CC_mean, y=NPV,fill=Model,color=Model))+
+  geom_point()+xlab("Clustering Coefficient")+
+  facet_wrap(~Model)+ theme(text = element_text(size = 20)) 
+```
+#Visualize the relationship between the original scale of clustering coefficient and Final Inf by model types
+```{r}
+ggplot(cc_diffusion, aes(x=CC_mean, y=FinalInf,fill=Model,color=Model))+
+  geom_point()+
+  facet_grid(Model~NetType)+ theme(text = element_text(size = 20)) 
+```
+#Visualize the relationship between the original scale of clustering coefficient and Final Inf by network types
+
+```{r}
+ggplot(cc_diffusion, aes(x=CC_mean, y=FinalInf,fill=NetType,color=NetType))+
+  geom_point()+
+  facet_grid(Model~NetType)+ theme(text = element_text(size = 20)) 
+```
+##seperate and Visualize the relationship between the original scale of clustering coefficient and NPV by model types and network types
+
+```{r}
+ggplot(cc_diffusion, aes(x=CC_mean, y=NPV,color=Model))+
+  geom_point()+xlab("Clustering Coefficient")+ylab("NPV")+
+  facet_grid(NetType~Model)+ theme(text = element_text(size = 15)) +theme(legend.position = "none")
+```
+
+```{r}
+ggplot(cc_diffusion, aes(x=CC_mean, y=FinalInf,color=Model))+
+  geom_point()+xlab("Clustering Coefficient")+ylab("Final Infection")+
+  facet_grid(NetType~Model)+ theme(text = element_text(size = 15)) +theme(legend.position = "none")
+```
+
+
+
+
+#subset the n1000 data where the NPV==0
+```{r}
+cc_n1000_sub=cc_diffusion[cc_diffusion$NPV==0,]
+cc_n1000_sub_non_zero=cc_diffusion[cc_diffusion$NPV!=0,]
+```
+
+#visualize the relationship between clustering coefficient and NPV by model type for subset data where NPV>0
+```{r}
+ggplot(cc_n1000_sub_non_zero, aes(x=CC_mean, y=NPV,color=Model))+
+  geom_point()+xlab("Clustering Coefficient")+ylab("NPV")+
+  facet_grid(Model~NetType)+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+
+  theme(legend.position="none")
+```
+
+```{r}
+ggplot(cc_n1000_sub_non_zero, aes(x=CC_mean, y=FinalInf,color=Model))+
+  geom_point()+xlab("Clustering Coefficient")+ylab("Final Infection")+
+  facet_grid(Model~NetType)+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+
+  theme(legend.position="none")
+```
+
+
+
+
+```{r}
+ggplot(cc_diffusion, aes(x=CC_mean, y=NPV,color=Model))+
+  geom_point()+xlab("Clustering Coefficient")+ylab("NPV")+
+  facet_grid(NetType~Model)+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+
+  theme(legend.position="none")
+```
+
+
+#visualize the relationship between clustering coefficient and NPV by model type for subset data where NPV=0
+```{r}
+ggplot(cc_n1000_sub, aes(x=CC_mean, y=NPV,color=Model))+
+  geom_point()+xlab("Clustering Coefficient")+ylab("NPV")+
+  facet_grid(Model~NetType)+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+
+  theme(legend.position="none")
+```
+
+#visualize the relationships between the logit of clustering coefficient and network type
+```{r}
+cc_n1000=cc_diffusion
+```
+
+
+#visualize the relationships between the logit of clustering coefficient and network type
+```{r}
+ggplot(cc_n1000, aes(x=ModelParam, y=CC_mean, shape=NetType, color=NetType))+
+  facet_grid(NetType ~ .,scale="free")+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab("Clustering Coefficient")+
+  xlab("Model Parameter")#+
+  #theme(legend.position=c(0.85,0.83))
+```
+```{r}
+ggplot(cc_n1000, aes(x=ModelParam, y=CC_mean, shape=Model, color=Model))+
+  facet_grid(Model ~ .,scale="free")+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab("Clustering Coefficient")+
+  xlab("Model Parameter")+
+  theme(legend.position="none")
+```
+
+
+
+
+
+#visualize the relationships between the logit of clustering coefficient and network type
+```{r}
+library(ggplot2)
+library(gridExtra)
+cc_npv=ggplot(cc_n1000, aes(x=CC_mean, y=NPV))+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+npv_model=ggplot(cc_n1000, aes(x=Model,y=NPV,  fill=Model)) + 
+    geom_boxplot()+
+    xlab("Model")+
+    ylab("NPV")+
+    theme(text = element_text(size = 20))+
+    theme(legend.position="none")
+grid.arrange(cc_npv,npv_model,  ncol = 2)
+```
+
+```{r}
+npv_models=ggplot(cc_n1000, aes(x=Model,y=NPV,  fill=Model)) + 
+    geom_boxplot()+
+    xlab("Model")+
+    ylab("NPV")+
+    theme(text = element_text(size = 10))+
+    theme(legend.position="none")
+```
+
+
+
+
+```{r}
+
+
+ccnpvall=ggplot(cc_n1000, aes(x=CC_mean, y=NPV,color=Model))+
+  geom_point()+xlab("Clustering Coefficient")+ylab("NPV")+
+  facet_grid(NetType~Model)+ theme(text = element_text(size = 20)) +theme(legend.position = "none")
+ccnpvallf=ggplot(cc_n1000, aes(x=CC_mean, y=FinalInf,color=Model))+
+  geom_point()+xlab("Clustering Coefficient")+ylab("Final Infection")+
+  facet_grid(NetType~Model)+ theme(text = element_text(size = 20)) +theme(legend.position = "none")
+```
+
+
+
+
+```{r}
+modelp_npv=ggplot(cc_n1000, aes(x=ModelParam, y=NPV))+
+  geom_point(aes(colour=Model))+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+
+modelp_npv_sub=ggplot(cc_n1000_sub_non_zero, aes(x=ModelParam, y=NPV))+
+  geom_point(aes(colour=Model))+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+
+modelp_npv01=ggplot(cc_n1000, aes(x=ModelParam01, y=NPV))+
+  geom_point(aes(colour=Model))+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+
+modelp_npv_sub01=ggplot(cc_n1000_sub_non_zero, aes(x=ModelParam01, y=NPV))+
+  geom_point(aes(colour=Model))+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+```
+
+
+
+
+```{r}
+modelp_npvfaced=ggplot(cc_n1000, aes(x=ModelParam, y=NPV))+
+  geom_point(aes(colour=Model))+ 
+  facet_grid(cols=vars(Model))+
+  theme(text = element_text(size = 10)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+
+modelp_npv_subfaced=ggplot(cc_n1000_sub_non_zero, aes(x=ModelParam, y=NPV))+
+  geom_point(aes(colour=Model))+ 
+   facet_grid(cols=vars(Model))+
+  theme(text = element_text(size = 10)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+
+modelp_npv01faced=ggplot(cc_n1000, aes(x=ModelParam01, y=NPV))+
+  geom_point(aes(colour=Model))+ 
+   facet_grid(cols=vars(Model))+
+  theme(text = element_text(size = 10)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+
+modelp_npv_sub01faced=ggplot(cc_n1000_sub_non_zero, aes(x=ModelParam01, y=NPV))+
+  geom_point(aes(colour=Model))+ 
+   facet_grid(cols=vars(Model))+
+  theme(text = element_text(size = 10)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+```
+
+
+
+
+```{r}
+cc_npv_sub=ggplot(cc_n1000_sub_non_zero, aes(x=CC_mean, y=NPV))+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+npv_model_sub=ggplot(cc_n1000_sub_non_zero, aes(x=Model,y=NPV,  fill=Model))+     xlab("Model")+
+    ylab("NPV")+
+    geom_boxplot()+
+    theme(legend.position="none")+
+    theme(text = element_text(size = 20))
+grid.arrange(cc_npv_sub,npv_model_sub,  ncol = 2)
+```
+
+```{r}
+npv_model_subs=ggplot(cc_n1000_sub_non_zero, aes(x=Model,y=NPV,  fill=Model))+     xlab("Model")+
+    ylab("NPV")+
+    geom_boxplot()+
+    theme(legend.position="none")+
+    theme(text = element_text(size = 10))
+```
+
+
+
+```{r}
+npv_net=ggplot(cc_n1000, aes(x=NetType,y=NPV,  fill=NetType)) + 
+    geom_boxplot()+
+    xlab("Network Type")+
+    ylab("NPV")+
+    theme(text = element_text(size = 20))+
+    theme(legend.position="none")
+
+npv_net_sub=ggplot(cc_n1000_sub_non_zero, aes(x=NetType,y=NPV,  fill=NetType)) + 
+    geom_boxplot()+
+    xlab("Network Type")+
+    ylab("NPV")+
+    theme(text = element_text(size = 20))+
+    theme(legend.position="none")
+
+```
+
+```{r}
+grid.arrange(npv_model,modelp_npv,npv_model_sub,modelp_npv_sub,  ncol = 2,nrow=2)
+```
+
+```{r}
+grid.arrange(npv_model,modelp_npvfaced,npv_model_sub,modelp_npv_subfaced,  ncol = 2,nrow=2)
+```
+```{r}
+grid.arrange(npv_models,modelp_npvfaced,npv_model_subs,modelp_npv_subfaced,  ncol = 2,nrow=2)
+```
+
+
+
+
+```{r}
+grid.arrange(npv_model,modelp_npv01,npv_model_sub,modelp_npv_sub01,  ncol = 2,nrow=2)
+```
+```{r}
+grid.arrange(npv_model,modelp_npv01faced,npv_model_sub,modelp_npv_sub01faced,  ncol = 2,nrow=2)
+```
+
+```{r}
+grid.arrange(npv_models,modelp_npv01faced,npv_model_subs,modelp_npv_sub01faced,  ncol = 2,nrow=2)
+```
+
+
+```{r}
+grid.arrange(npv_model,npv_net,npv_model_sub, npv_net_sub,  ncol = 2,nrow=2)
+```
+
+
+
+
+
+```{r}
+npv_model_final=ggplot(cc_n1000, aes(x=Model,y=FinalInf,  fill=Model))+     xlab("Model")+
+    ylab("Final Infection")+
+    geom_boxplot()+
+    theme(legend.position="none")+
+    theme(text = element_text(size = 20))
+
+npv_net_final=ggplot(cc_n1000, aes(x=NetType,y=FinalInf,  fill=NetType))+     xlab("Network Type")+
+    ylab("Final Infection")+
+    geom_boxplot()+
+    theme(legend.position="none")+
+    theme(text = element_text(size = 20))
+
+npv_model_final_sub=ggplot(cc_n1000_sub_non_zero, aes(x=Model,y=FinalInf,  fill=Model))+     xlab("Model")+
+    ylab("Final Infection")+
+    geom_boxplot()+
+    theme(legend.position="none")+
+    theme(text = element_text(size = 20))
+
+npv_net_final_sub=ggplot(cc_n1000_sub_non_zero, aes(x=NetType,y=FinalInf,  fill=NetType))+     xlab("Network Type")+
+    ylab("Final Infection")+
+    geom_boxplot()+
+    theme(legend.position="none")+
+    theme(text = element_text(size = 20))
+```
+
+
+```{r}
+grid.arrange(npv_model_final,npv_net_final,
+             npv_model_final_sub,npv_net_final_sub,
+             ncol = 2,nrow=2)
+```
+
+
+```{r}
+grid.arrange(cc_npv,npv_model,cc_npv_sub,npv_model_sub,  ncol = 2,nrow=2)
+```
+
+
+#visualize the relationships between the logit of clustering coefficient and network type
+```{r}
+full_data=ggplot(cc_n1000, aes(x=CC_mean, y=NPV, shape=Model, color=Model))+
+  facet_grid(Model~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+full_data
+```
+
+#visualize the relationships between the logit of clustering coefficient and network type
+```{r}
+ggplot(cc_n1000, aes(x=ModelParam, y=NPV,color=Model))+
+  facet_grid(Model~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+```
+
+```{r}
+ggplot(cc_n1000, aes(x=NetParam, y=NPV,color=NetType))+
+  facet_grid(NetType~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Network Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+```
+```{r}
+ggplot(cc_n1000, aes(x=NetParam01, y=NPV,color=NetType))+
+  facet_grid(NetType~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Network Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+```
+
+
+
+
+```{r}
+ggplot(cc_n1000, aes(x=ModelParam01, y=NPV,color=Model))+
+  facet_grid(Model~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+```
+
+
+```{r}
+ggplot(cc_n1000, aes(x=ModelParam01, y=FinalInf,color=Model))+
+  facet_grid(Model~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("Final Infection")+
+  theme(legend.position="none")
+```
+
+
+
+```{r}
+net_param=ggplot(cc_n1000, aes(x=NetParam, y=CC_mean,color=NetType))+
+  facet_grid(NetType~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Network Parameter")+
+  ylab("Clustering Coefficient")+
+  theme(legend.position="none")
+```
+
+
+```{r}
+net_param01=ggplot(cc_n1000, aes(x=NetParam01, y=CC_mean,color=NetType))+
+  facet_grid(NetType~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Network Parameter")+
+  ylab("Clustering Coefficient")+
+  theme(legend.position="none")
+```
+
+
+
+```{r}
+full_data_finit=ggplot(cc_n1000, aes(x=CC_mean, y=FinalInf, shape=Model, color=Model))+
+  facet_grid(Model~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("Final Infection")+
+  theme(legend.position="none")
+#full_data_finit
+
+```
+
+
+```{r}
+grid.arrange(full_data_finit, net_param, ncol = 2)
+```
+
+```{r}
+grid.arrange(full_data_finit, net_param01, ncol = 2)
+```
+
+
+
+```{r}
+full_data_finit_new=ggplot(cc_n1000, aes(x=CC_mean, y=FinalInf, shape=Model, color=Model))+
+  facet_grid( NetType~Model)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("Final Infection")+
+  theme(legend.position="none")
+full_data_npv_new
+
+full_data_npv_new=ggplot(cc_n1000, aes(x=CC_mean, y=NPV, shape=Model, color=Model))+
+  facet_grid( NetType~Model)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+full_data_finit_new
+```
+
+
+```{r}
+grid.arrange(full_data_npv_new, full_data_finit_new, ncol = 2)
+```
+
+```{r}
+full_data_finit_news=ggplot(cc_n1000, aes(x=CC_mean, y=FinalInf, shape=Model, color=Model))+
+  facet_grid( NetType~Model)+
+  geom_point()+ 
+  theme(text = element_text(size = 10)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("Final Infection")+
+  theme(legend.position="none")
+
+
+full_data_npv_news=ggplot(cc_n1000, aes(x=CC_mean, y=NPV, shape=Model, color=Model))+
+  facet_grid( NetType~Model)+
+  geom_point()+ 
+  theme(text = element_text(size = 10)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+grid.arrange(full_data_npv_news, full_data_finit_news, ncol = 2)
+```
+
+
+
+
+
+```{r}
+
+grid.arrange(full_data, net_param, ncol = 2)
+```
+```{r}
+grid.arrange(full_data, net_param01, ncol = 2)
+```
+
+
+#visualize the relationships between the logit of clustering coefficient and network type
+```{r}
+non_zero=ggplot(cc_n1000_sub_non_zero, aes(x=CC_mean, y=NPV, shape=Model, color=Model))+
+  facet_grid(Model~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+non_zero
+```
+
+```{r}
+ grid.arrange(full_data, non_zero, ncol = 2)
+```
+
+
+
+
+
+
+```{r}
+library(dplyr)
+pie_data_cc=table(cc_n1000_sub$Model)
+pie_data_cc
+```
+
+```{r}
+head(pie_data_cc)
+```
+
+
+#visualize 0 by model
+```{r}
+#Cluster One
+cc_pie_zero=as.data.frame(pie_data_cc)
+cc_pie_zero$pct=round(cc_pie_zero$Freq/(sum(cc_pie_zero$Freq)),2)
+cc_pie_zero$labels= scales::percent(cc_pie_zero$pct)
+colnames(cc_pie_zero)[colnames(cc_pie_zero) == "Var1"] <- "Model"
+
+ggplot(cc_pie_zero, aes(x = "", y = pct, fill = Model)) +
+  geom_col() +
+  geom_text(aes(label = labels),size=8,
+            position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y")+ggtitle("")+theme(plot.title = element_text(hjust = 0.5))+
+  theme(text=element_text(size = 20))
+```
+
+```{r}
+zero_hist=ggplot(data=cc_pie_zero, aes(x=Model, y=Freq)) +
+  geom_bar(stat="identity", fill="steelblue")+
+  geom_text(aes(label=Freq), vjust=-0.3)+ 
+  theme(text=element_text(size = 20))
+zero_hist
+#+theme_minimal()
+```
+
+
+```{r}
+LFTM_zero=cc_n1000_sub[cc_n1000_sub$Model=="LFTM",]
+dim(LFTM_zero)
+```
+
+
+```{r}
+LFTM_total=cc_n1000[cc_n1000$Model=="LFTM",]
+dim(LFTM_total)
+```
+
+```{r}
+dim(LFTM_zero)[1]/dim(LFTM_total)[1]
+```
+
+
+
+```{r}
+LATM_zero=cc_n1000_sub[cc_n1000_sub$Model=="LATM",]
+LATM_total=cc_n1000[cc_n1000$Model=="LATM",]
+dim(LATM_zero)[1]/dim(LATM_total)[1]
+```
+
+
+```{r}
+ICM_zero=cc_n1000_sub[cc_n1000_sub$Model=="ICM",]
+ICM_total=cc_n1000[cc_n1000$Model=="ICM",]
+dim(ICM_zero)[1]/dim(ICM_total)[1]
+```
+
+
+
+#visualize the InitInf by network type for subset data where NPV==0
+```{r}
+
+  ggplot(cc_n1000_sub, aes(x = InitInf,fill=NetType,color=NetType)) +
+  geom_histogram(bins=100)+ #+ggtitle("Initial Infection by Newtowrk NPV=0")+
+  facet_grid(NetType ~ .)+ theme(text = element_text(size = 14)) +theme(plot.title = element_text(hjust = 0.5))+xlab("Initial Infection")+
+  theme(legend.position="none")
+```
+
+#visualize the Model parameters by network type for subset data where NPV==0
+```{r}
+ ggplot(cc_n1000_sub, aes(x = ModelParam,fill=NetType,color=NetType)) +
+  geom_histogram(bins=100) +
+  facet_wrap(NetType ~ .,scale="free")+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+xlab("Model Parameter")+
+  theme(legend.position="none")
+```
+
+
+#visualize the Model parameters by network type for subset data where NPV==0
+```{r}
+ init_by_network = ggplot(cc_n1000_sub, aes(x = InitInf,fill=NetType,color=NetType)) +
+  geom_histogram(bins=100) +
+  facet_wrap(NetType ~ .)+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+xlab("Initial Infection")+
+  theme(legend.position="none")
+init_by_network
+```
+
+```{r}
+ init_by_model = ggplot(cc_n1000_sub, aes(x = InitInf,fill=Model,color=Model)) +
+  geom_histogram(bins=100) +
+  facet_wrap(Model ~ .)+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+xlab("Initial Infection")+
+  theme(legend.position="none")
+init_by_model
+```
+
+
+
+
+
+#visualize the Model parameters by network type for subset data where NPV==0
+```{r}
+ ggplot(cc_n1000_sub, aes(x = InitInf,fill=Model,color=Model)) +
+  geom_histogram(bins=100) +
+  facet_wrap(Model ~ .)+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+xlab("Initial Infection")+
+  theme(legend.position="none")
+```
+
+
+
+#visualize the Model parameters by network type for subset data where NPV==0
+```{r}
+ ggplot(cc_n1000_sub, aes(x = ModelParam,fill=Model,color=Model)) +
+  geom_histogram(bins=100) +
+  facet_wrap(Model ~ .)+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+xlab("Model Parameter")+
+  theme(legend.position="none")
+```
+
+
+
+
+#visualize the Model parameters by network type for full data all NPV
+```{r}
+ ggplot(cc_n1000, aes(x = ModelParam,fill=NetType,color=NetType)) +
+  geom_histogram(bins=100) +xlab("Model Parameter")+
+  facet_wrap(NetType ~ .,scale="free")+ theme(text = element_text(size = 15)) +theme(plot.title = element_text(hjust = 0.5))+
+  theme(legend.position="none")
+```
+#visualize the Model parameters by model type for full data all NPV
+
+```{r}
+
+ ggplot(cc_n1000, aes(x = ModelParam,fill=Model,color=Model)) +
+  geom_histogram(bins=100) +xlab("Model Parameter")+
+  facet_wrap(Model ~ .,scales = "free")+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+
+  theme(legend.position="none")
+```
+#visualize the Model parameters for ICM model for full data all NPV
+```{r}
+ ggplot(cc_n1000[cc_n1000$Model=="ICM",] ,aes(x = ModelParam) )+
+  geom_histogram(bins=100) + theme(text = element_text(size = 15)) +theme(plot.title = element_text(hjust = 0.5))+
+  theme(legend.position="none")
+```
+#visualize the histogram of Model parameters by model type for full data all NPV and subset data NPV==0
+############needs update the ylim
+########################
+```{r}
+library("gridExtra") 
+model_name=c("ICM","LATM","LFTM" )
+model_parameter_fdata = list()
+model_parameter_sub=list()
+for (m_name in model_name){
+  if (m_name=="ICM" || m_name=="LFTM"){
+    low_lim=0
+    upper_lim=1
+  }
+  if (m_name=="LATM"){
+    low_lim=1
+    upper_lim=10
+  }
+  model_parameter_fdata[[m_name]]=ggplot( cc_n1000[cc_n1000$Model==m_name,],aes(x =  ModelParam)) +
+    geom_histogram(bins=100) + 
+    theme(text = element_text(size = 20)) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    xlab("Model Parameter") +xlim(low_lim,upper_lim)+ylim(0,9000)+
+    ggtitle(paste0("All NPV  ",m_name)) +
+    theme(legend.position="none")
+  
+  ##remove zero
+  model_parameter_sub[[m_name]]=ggplot(cc_n1000_sub_non_zero[cc_n1000_sub_non_zero$Model==m_name,] ,aes(x =    
+    ModelParam)) +
+    geom_histogram(bins=100) + 
+    theme(text = element_text(size = 20)) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    xlab("Model Parameter") +xlim(low_lim,upper_lim)+ylim(0,9000)+
+    ggtitle(paste0(" NPV > 0  ",m_name)) +
+    theme(legend.position="none")
+  
+  
+   grid.arrange(model_parameter_fdata[[m_name]], model_parameter_sub[[m_name]], ncol = 2)
+}
+```
+
+#visualize the Model parameters for LATM model for full data all NPV
+
+```{r}
+ggplot(cc_n1000[cc_n1000$Model=="LATM",] ,aes(x = ModelParam) )+
+  geom_histogram(bins=100) + theme(text = element_text(size = 15)) +theme(plot.title = element_text(hjust = 0.5))+xlab("Model Parameter")+ggtitle(paste0("Histogram of Model Parameter for All NPV LATM "))+
+  theme(legend.position="none")
+```
+#visualize the Model parameters for LATM for subset data NPV==0
+```{r}
+ggplot(cc_n1000_sub[cc_n1000_sub$Model=="LATM",] ,aes(x = ModelParam) )+
+  geom_histogram(bins=100) + theme(text = element_text(size = 15)) +theme(plot.title = element_text(hjust = 0.5))+ggtitle("Histogram of Model Parameters for NPV==0")+
+  theme(legend.position="none")
+```
+
+#Visuzlie the relationship of IniInf and Model parameter for subset data NPV==0
+
+```{r}
+ggplot(cc_n1000_sub, aes(x=InitInf, y=ModelParam,color=Model))+
+  geom_point()+xlab("Initial Infection")+ylab("Model Parameter")+
+  facet_wrap(Model~.,scales="free")+ theme(text = element_text(size = 15))+theme(legend.position="none")+theme(plot.title = element_text(hjust = 0.5))#+ggtitle("NPV = 0")
+
+```
+
+#Visuzlie the relationship of IniInf and Model parameter for subset data NPV>0
+
+```{r}
+ggplot(cc_n1000_sub_non_zero, aes(x=InitInf, y=ModelParam,color=Model))+
+  geom_point()+xlab("Initial Infection")+ylab("Model Parameter")+
+  facet_grid(Model~.,scales="free")+ theme(text = element_text(size = 20)) +theme(legend.position="none")+ggtitle("NPV  Greater than 0")+theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+
+#Visuzlie the relationship of IniInf and Model parameter for subset data NPV>0
+#histogram
+```{r}
+ggplot(cc_n1000_sub_non_zero, aes(x=InitInf*ModelParam,color=Model))+
+  geom_histogram(bins=100)+xlab("Initial Infection * Model Parameter")+
+  #facet_wrap(Model~.,scales="free")+ theme(text = element_text(size = 20))
+ facet_wrap(Model~.)+ theme(text = element_text(size = 20))+theme(legend.position="none")+ggtitle("NPV > 0")+theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+#Visuzlie the relationship of IniInf and Model parameter for subset data NPV>0
+#histogram
+```{r}
+ggplot(cc_n1000_sub, aes(x=InitInf*ModelParam,color=Model))+
+  geom_histogram(bins=100)+xlab("Initial Infection * Model Parameter")+ylab("Value")+
+  facet_wrap(Model~.)+ theme(text = element_text(size = 20)) +theme(legend.position="none")+ggtitle("NPV = 0")+theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+#check the percentage of 0 in the full data all NPV
+```{r}
+sum(cc_n1000$NPV==0)/dim(cc_n1000)[1]
+```
+
+####filter use the data where NPV !=0
+```{r}
+cc_n1000_sub_non_zero=cc_n1000[cc_n1000$NPV!=0,]
+hist(cc_n1000_sub_non_zero$NPV,xlab="Net Present Value (NPV)",main="Histogram of NPV",cex.axis=1.5,cex.lab=1.5)
+
+```
+#visualize NPV by model for NPV not equal to 0
+```{r}
+ ggplot(cc_n1000_sub_non_zero, aes(x = NPV,fill=Model,color=Model)) +
+  geom_histogram(bins=100) +xlab("Net Present Value (NPV)")+
+  facet_grid(Model ~ .)+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+#+ggtitle("Histogram of NPV by Model Non-Zero NPV")+
+  theme(legend.position="none")
+```
+
+#visualize NPV by network type for NPV not equal to 0
+```{r}
+ ggplot(cc_n1000_sub_non_zero, aes(x = NPV,fill=NetType,color=NetType)) +
+  geom_histogram() +xlab("Net Present Value (NPV)")+
+  facet_grid(NetType ~ .)+ theme(text = element_text(size = 13)) +theme(plot.title = element_text(hjust = 0.5))+ggtitle("Histogram of NPV by Network Type Non-Zero NPV")+
+  theme(legend.position="none")
+```
+#visualize NPV by network type and Model NPV not equal to 0
+```{r}
+ ggplot(cc_n1000_sub_non_zero, aes(x = NPV,fill=NetType,color=NetType)) +
+  geom_histogram(bins=100) +xlab("Net Present Value (NPV)")+
+  facet_grid(NetType ~ Model)+ theme(text = element_text(size = 13.5)) +theme(plot.title = element_text(hjust = 0.5))+ggtitle(" NPV > 0")+
+  theme(legend.position="none")
+```
+
+
+
+#dimension for non zero NPV
+```{r}
+dim(cc_n1000_sub_non_zero)
+```
+
+
+
+
+#minimum value of non zero NPV
+```{r}
+min(cc_n1000_sub_non_zero$NPV)
+```
+
+
+#check the number of minimum value of non zero NPV
+```{r}
+number_of_one=sum(cc_n1000_sub_non_zero$NPV==min(cc_n1000_sub_non_zero$NPV))
+number_of_one
+```
+
+#check the proportion of minimum value of non zero NPV
+```{r}
+number_of_one/(dim(cc_n1000_sub_non_zero)[1])
+```
+
+
+```{r}
+cc_n1000_sub_non_zero$Model= relevel(as.factor(cc_n1000_sub_non_zero$Model), ref="LFTM")
+```
+
+```{r}
+cc_n1000_sub_non_zero$NetType= relevel(as.factor(cc_n1000_sub_non_zero$NetType), ref="SW")
+```
+
+#all analysis used the parameter01 
+```{r}
+library(mgcv)
+library(mgcViz)
+base_model_npv=gam(NPV~s(CC_mean),data=cc_n1000_sub_non_zero)
+summary(base_model_npv)
+```
+
+```{r}
+base_model_npv_plot=getViz(base_model_npv)
+print(plot(base_model_npv_plot, allTerms = T), pages = 1)
+```
+
+
+```{r}
+base_model_finalint=gam(FinalInf~s(CC_mean),data=cc_n1000_sub_non_zero)
+summary(base_model_finalint)
+```
+
+
+```{r}
+base_model_finalint_plot=getViz(base_model_finalint)
+print(plot(base_model_finalint_plot, allTerms = T), pages = 1)
+```
+
+#add model type
+```{r}
+base_modeltype_npv=gam(NPV~s(CC_mean)+s(CC_mean,by=Model),data=cc_n1000_sub_non_zero)
+summary(base_modeltype_npv)
+
+```
+
+```{r}
+base_modeltype_npv_plot=getViz(base_modeltype_npv)
+print(plot(base_modeltype_npv_plot, allTerms = T), pages = 1)
+```
+
+```{r}
+base_modeltype_npv_net=gam(NPV~s(CC_mean)+s(CC_mean,by=Model)+s(CC_mean,by=NetType),data=cc_n1000_sub_non_zero)
+summary(base_modeltype_npv_net)
+```
+
+
+```{r}
+base_modeltype_npv_plot_net=getViz(base_modeltype_npv_net)
+print(plot(base_modeltype_npv_plot_net, allTerms = T), pages = 1)
+```
+
+
+```{r}
+base_modeltype_final_net=gam(FinalInf~s(CC_mean)+s(CC_mean,by=Model)+s(CC_mean,by=NetType),data=cc_n1000_sub_non_zero)
+summary(base_modeltype_final_net)
+```
+
+
+```{r}
+base_modeltype_final_net_plot=getViz(base_modeltype_final_net)
+print(plot(base_modeltype_final_net_plot, allTerms = T), pages = 1)
+```
+
+
+
+```{r}
+base_modeltype_finalint=gam(FinalInf~s(CC_mean)+s(CC_mean,by=Model),data=cc_n1000_sub_non_zero)
+summary(base_modeltype_finalint)
+```
+
+
+
+```{r}
+base_modeltype_finalint_plot=getViz(base_modeltype_finalint)
+print(plot(base_modeltype_finalint_plot, allTerms = T), pages = 1)
+```
+
+
+```{r}
+
+#full model npv
+additive_cc_para=gam(NPV~s(CC_mean)+Model+s(NetParam01)+s(CC_mean,NetParam01)+s(ModelParam01)+s(CC_mean,ModelParam01),data=cc_n1000_sub_non_zero)
+summary(additive_cc_para)
+```
+
+```{r}
+additive_cc_para_plot=getViz(additive_cc_para)
+print(plot(additive_cc_para_plot, allTerms = T), pages = 1)
+```
+
+
+
+
+
+```{r}
+#full model final infection
+additive_cc_para_f=gam(FinalInf~s(CC_mean)+Model+s(NetParam01)+s(CC_mean,NetParam01)+s(ModelParam01)+s(CC_mean,ModelParam01),data=cc_n1000_sub_non_zero)
+summary(additive_cc_para_f)
+```
+
+
+
+```{r}
+additive_cc_para_f_plot=getViz(additive_cc_para_f)
+print(plot(additive_cc_para_f_plot, allTerms = T), pages = 1)
+```
+
+
+
+```{r}
+#model 3 table 3
+additive_cc_para_net=gam(NPV~s(CC_mean)+NetType+s(NetParam01)+s(CC_mean,NetParam01)+s(ModelParam01)+s(CC_mean,ModelParam01)+s(ModelParam01,by=Model)+s(NetParam01,by=NetType),data=cc_n1000_sub_non_zero)
+summary(additive_cc_para_net)
+```
+
+
+```{r}
+additive_cc_para_by_plot=getViz(additive_cc_para_net)
+print(plot(additive_cc_para_by_plot, allTerms = T), pages = 1)
+```
+
+
+```{r}
+additive_cc_para_net_final=gam(FinalInf~s(CC_mean)+NetType+s(NetParam01)+s(CC_mean,NetParam01)+s(ModelParam01)+s(CC_mean,ModelParam01)+s(ModelParam01,by=Model)+s(NetParam01,by=NetType),data=cc_n1000_sub_non_zero)
+summary(additive_cc_para_net_final)
+```
+
+
+```{r}
+additive_cc_para_by_plot_final=getViz(additive_cc_para_net_final)
+print(plot(additive_cc_para_by_plot_final, allTerms = T), pages = 1)
+```
+
+
+```{r}
+plot(additive_cc,residuals=TRUE)
+```
+```{r}
+gam.check(additive_cc)
+```
+
+
+```{r}
+anova(additive_cc_no_netp,additive_cc,test="LRT")
+```
+
+
+#visualization
+#https://cran.r-project.org/web/packages/mgcViz/vignettes/mgcviz.html
+
+
+#just the parameter
+```{r}
+#just parameter
+additive_cc_para_only=gam(NPV~s(NetParam01)+s(ModelParam01),data=cc_n1000_sub_non_zero)
+summary(additive_cc_para_only)
+```
+
+```{r}
+para_baseplot=getViz(additive_cc_para_only)
+print(plot(para_baseplot, allTerms = T), pages = 1)
+```
+```{r}
+#just parameter
+additive_cc_para_only_by=gam(NPV~s(NetParam01)+s(ModelParam01)+s(NetParam01,by=NetType)+s(ModelParam01,by=Model),data=cc_n1000_sub_non_zero)
+summary(additive_cc_para_only_by)
+```
+
+
+```{r}
+para_baseplot_by=getViz(additive_cc_para_only_by)
+print(plot(para_baseplot_by, allTerms = T), pages = 1)
+```
+
+
+#final infection
+```{r}
+#just parameter
+additive_cc_para_only_final=gam(FinalInf~s(NetParam01)+s(ModelParam01),data=cc_n1000_sub_non_zero)
+summary(additive_cc_para_only_final)
+```
+
+
+
+
+
+```{r}
+para_baseplot_final=getViz(additive_cc_para_only_final)
+print(plot(para_baseplot_final, allTerms = T), pages = 1)
+```
+
+```{r}
+additive_cc_para_only_by_final=gam(FinalInf~s(NetParam01)+s(ModelParam01)+s(NetParam01,by=NetType)+s(ModelParam01,by=Model),data=cc_n1000_sub_non_zero)
+summary(additive_cc_para_only_by_final)
+```
+
+
+
+```{r}
+
+para_baseplot_by_final=getViz(additive_cc_para_only_by_final)
+print(plot(para_baseplot_by_final, allTerms = T), pages = 1)
+```
+
+
+```{r}
+additive_cc_para_only_by_modelnet=gam(NPV~Model+NetType+s(NetParam01)+s(ModelParam01)+s(NetParam01,by=NetType)+s(ModelParam01,by=Model),data=cc_n1000_sub_non_zero)
+summary(additive_cc_para_only_by_modelnet)
+```
+
+
+```{r}
+para_baseplot_by_modelnet=getViz(additive_cc_para_only_by_modelnet)
+print(plot(para_baseplot_by_modelnet, allTerms = T), pages = 1)
+```
+
+
+
+```{r}
+
+additive_addcc_para_only_by_modelnet=gam(NPV~s(CC_mean)+Model+NetType+s(NetParam01)+s(ModelParam01)+s(NetParam01,by=NetType)+s(ModelParam01,by=Model),data=cc_n1000_sub_non_zero)
+summary(additive_addcc_para_only_by_modelnet)
+```
+
+
+```{r}
+
+
+additive_addcc_para_only_by_modelnet_inter=gam(NPV~s(CC_mean)+Model+NetType+s(NetParam01)+s(ModelParam01)+s(NetParam01,by=NetType)+s(ModelParam01,by=Model)+s(CC_mean,NetParam01)+s(CC_mean,ModelParam01),data=cc_n1000_sub_non_zero)
+summary(additive_addcc_para_only_by_modelnet_inter)
+```
+
+```{r}
+para_baseplot_by_modelnet_inter=getViz(additive_addcc_para_only_by_modelnet_inter)
+print(plot(para_baseplot_by_modelnet_inter, allTerms = T), pages = 1)
+```
+
+
+```{r}
+additive_addcc_para_only_by_modelnet_by=gam(NPV~s(CC_mean)+s(CC_mean,by=Model)+s(CC_mean,by=NetType)+Model+NetType+s(NetParam01)+s(ModelParam01)+s(NetParam01,by=NetType)+s(ModelParam01,by=Model),data=cc_n1000_sub_non_zero)
+summary(additive_addcc_para_only_by_modelnet_by)
+```
+
+
+```{r}
+additive_addcc_para_only_by_modelnet_by_net=gam(NPV~s(CC_mean)+s(CC_mean,by=Model)+s(CC_mean,by=NetType)+Model+NetType+s(NetParam01)+s(ModelParam01)+s(NetParam01,by=NetType)+s(ModelParam01,by=Model)+s(CC_mean,ModelParam01)+s(CC_mean,NetParam01),data=cc_n1000_sub_non_zero)
+summary(additive_addcc_para_only_by_modelnet_by_net)
+```
+
+```{r}
+additive_addcc_para_only_by_modelnet_by_net_plot=getViz(additive_addcc_para_only_by_modelnet_by_net)
+print(plot(additive_addcc_para_only_by_modelnet_by_net_plot, allTerms = T), pages = 1)
+```
+
+
+
+
+```{r}
+additive_cc_para_only_by_final_modelnet=gam(FinalInf~Model+NetType+s(NetParam01)+s(ModelParam01)+s(NetParam01,by=NetType)+s(ModelParam01,by=Model),data=cc_n1000_sub_non_zero)
+summary(additive_cc_para_only_by_final_modelnet)
+```
+
+
+```{r}
+para_baseplot_by_final_modelnet=getViz(additive_cc_para_only_by_final_modelnet)
+print(plot(para_baseplot_by_final_modelnet, allTerms = T), pages = 1)
+```
+
+
+#read the real data
+```{r}
+cc_diffusion_real=read.csv("RealDFSData_CCDiffusion_OrientedParams01.csv")
+cc_diffusion_real_RNN=read.csv("RealRNNData_CCDiffusion_OrientedParams01.csv")
+
+```
+
+
+```{r}
+head(cc_diffusion_real)
+```
+
+```{r}
+table(cc_diffusion_real$NetSource)/sum(table(cc_diffusion_real$NetSource))
+```
+
+```{r}
+table(cc_diffusion_real$Model)/sum(table(cc_diffusion_real$Model))
+```
+
+
+
+```{r}
+head(cc_diffusion_real_RNN)
+```
+
+```{r}
+
+table(cc_diffusion_real_RNN$NetSource)/sum(table(cc_diffusion_real_RNN$NetSource))
+```
+
+```{r}
+table(cc_diffusion_real_RNN$Model)/sum(table(cc_diffusion_real_RNN$Model))
+```
+
+
+```{r}
+
+
+
+cc_diffusion_real$NetSource[cc_diffusion_real$NetSource == "facebook_combined_edges"] <- 'FBC'
+cc_diffusion_real$NetSource[cc_diffusion_real$NetSource == "HR_edges"] <- 'HR'
+cc_diffusion_real$NetSource[cc_diffusion_real$NetSource == "HU_edges"] <- 'HU'
+cc_diffusion_real$NetSource[cc_diffusion_real$NetSource == "large_twitch_edges"] <- 'LT'
+cc_diffusion_real$NetSource[cc_diffusion_real$NetSource == "musae_facebook_edges"] <- 'MFB'
+cc_diffusion_real$NetSource[cc_diffusion_real$NetSource == "RO_edges"] <- 'RO'
+
+
+
+```
+
+```{r}
+cc_diffusion_real_RNN$NetSource[cc_diffusion_real_RNN$NetSource == "HR_edges"] <- 'HR'
+cc_diffusion_real_RNN$NetSource[cc_diffusion_real_RNN$NetSource == "HU_edges"] <- 'HU'
+cc_diffusion_real_RNN$NetSource[cc_diffusion_real_RNN$NetSource == "large_twitch_edges"] <- 'LT'
+cc_diffusion_real_RNN$NetSource[cc_diffusion_real_RNN$NetSource == "musae_facebook_edges"] <- 'MFB'
+cc_diffusion_real_RNN$NetSource[cc_diffusion_real_RNN$NetSource == "RO_edges"] <- 'RO'
+```
+
+
+
+
+
+#graph and find the reference level
+
+
+```{r}
+dim(cc_diffusion_real[cc_diffusion_real$NPV==0,])[1]/dim(cc_diffusion_real)[1]
+dim(cc_diffusion_real_RNN[cc_diffusion_real_RNN$NPV==0,])[1]/dim(cc_diffusion_real_RNN)[1]
+```
+
+
+
+```{r}
+#while (!is.null(dev.list()))  dev.off()
+```
+
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+cc_npv_model_fig = function(cc_diffusion_real){
+  cc_npv=ggplot(cc_diffusion_real, aes(x=CC_mean, y=NPV))+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+npv_model=ggplot(cc_diffusion_real, aes(x=Model,y=NPV,  fill=Model)) + 
+    geom_boxplot()+
+    xlab("Model")+
+    ylab("NPV")+
+    theme(text = element_text(size = 20))+
+    theme(legend.position="none")
+grid.arrange(cc_npv,npv_model,  ncol = 2)
+}
+
+```
+```{r}
+# cc_npv_model_fig (cc_diffusion_real)
+# cc_npv_model_fig (cc_diffusion_real_RNN)
+```
+```{r}
+cc_npv=ggplot(cc_diffusion_real, aes(x=CC_mean, y=NPV))+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+npv_model=ggplot(cc_diffusion_real, aes(x=Model,y=NPV,  fill=Model)) + 
+    geom_boxplot()+
+    xlab("Model")+
+    ylab("NPV")+
+    theme(text = element_text(size = 20))+
+    theme(legend.position="none")
+grid.arrange(cc_npv,npv_model,  ncol = 2)
+```
+
+```{r}
+cc_npv_net=ggplot(cc_diffusion_real, aes(x=CC_mean, y=NPV))+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+npv_model_net=ggplot(cc_diffusion_real, aes(x=NetSource,y=NPV,  fill=NetSource)) + 
+    geom_boxplot()+
+    xlab("NetSource")+
+    ylab("NPV")+
+    theme(text = element_text(size = 20))+
+    theme(legend.position="none")
+#grid.arrange(cc_npv_net,npv_model_net,  ncol = 2)
+
+```
+
+```{r}
+cc_npv_net
+```
+
+
+
+```{r}
+npv_model_net
+```
+
+
+
+
+```{r}
+cc_npv_RNN=ggplot(cc_diffusion_real_RNN, aes(x=CC_mean, y=NPV))+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+npv_model_RNN=ggplot(cc_diffusion_real_RNN, aes(x=Model,y=NPV,  fill=Model)) + 
+    geom_boxplot()+
+    xlab("Model")+
+    ylab("NPV")+
+    theme(text = element_text(size = 20))+
+    theme(legend.position="none")
+grid.arrange(cc_npv_RNN,npv_model_RNN,  ncol = 2)
+```
+
+
+```{r}
+cc_npv_net_RNN=ggplot(cc_diffusion_real_RNN, aes(x=CC_mean, y=NPV))+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+npv_model_net_RNN=ggplot(cc_diffusion_real_RNN, aes(x=NetSource,y=NPV,  fill=NetSource)) + 
+    geom_boxplot()+
+    xlab("NetSource")+
+    ylab("NPV")+
+    theme(text = element_text(size = 20))+
+    theme(legend.position="none")
+#grid.arrange(cc_npv_net_RNN,npv_model_net_RNN,  ncol = 2)
+```
+
+```{r}
+cc_npv_net_RNN
+```
+
+```{r}
+npv_model_net_RNN
+```
+
+
+```{r}
+ccnpvall=ggplot(cc_diffusion_real, aes(x=CC_mean, y=NPV,color=Model))+
+  geom_point()+xlab("Clustering Coefficient")+ylab("NPV")+
+  facet_grid(NetSource~Model)+ theme(text = element_text(size = 10)) +theme(legend.position = "none")
+ccnpvallf=ggplot(cc_diffusion_real, aes(x=CC_mean, y=FinalInf,color=Model))+
+  geom_point()+xlab("Clustering Coefficient")+ylab("Final Infection")+
+  facet_grid(NetSource~Model)+ theme(text = element_text(size = 10)) +theme(legend.position = "none")
+
+
+```
+
+```{r}
+grid.arrange(ccnpvall,ccnpvallf,  ncol = 2)
+```
+
+
+
+```{r}
+ccnpvall_RNN=ggplot(cc_diffusion_real_RNN, aes(x=CC_mean, y=NPV,color=Model))+
+  geom_point()+xlab("Clustering Coefficient")+ylab("NPV")+
+  facet_grid(NetSource~Model)+ theme(text = element_text(size = 10)) +theme(legend.position = "none")
+ccnpvallf_RNN=ggplot(cc_diffusion_real_RNN, aes(x=CC_mean, y=FinalInf,color=Model))+
+  geom_point()+xlab("Clustering Coefficient")+ylab("Final Infection")+
+  facet_grid(NetSource~Model)+ theme(text = element_text(size = 10)) +theme(legend.position = "none")
+
+
+```
+
+```{r}
+grid.arrange(ccnpvall_RNN,ccnpvallf_RNN,  ncol = 2)
+```
+
+
+
+```{r}
+cc_diffusion_real_sub=cc_diffusion_real[cc_diffusion_real$NPV!=0,]
+cc_diffusion_real_sub_RNN=cc_diffusion_real_RNN[cc_diffusion_real_RNN$NPV!=0,]
+```
+
+
+
+
+```{r}
+cc_diffusion_real__zero=cc_diffusion_real[cc_diffusion_real$NPV==0,]
+cc_diffusion_real_zero_RNN=cc_diffusion_real_RNN[cc_diffusion_real_RNN$NPV==0,]
+```
+
+
+
+
+```{r}
+
+npv_model_sub=ggplot(cc_diffusion_real_sub, aes(x=Model,y=NPV,  fill=Model)) + 
+    geom_boxplot()+
+    xlab("Model")+
+    ylab("NPV")+
+    theme(text = element_text(size = 20))+
+    theme(legend.position="none")
+
+npv_model_sub_RNN=ggplot(cc_diffusion_real_sub_RNN, aes(x=Model,y=NPV,  fill=Model)) + 
+    geom_boxplot()+
+    xlab("Model")+
+    ylab("NPV")+
+    theme(text = element_text(size = 20))+
+    theme(legend.position="none")
+```
+
+
+
+
+
+```{r}
+modelp_npv=ggplot(cc_diffusion_real, aes(x=ModelParam01, y=NPV))+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+
+modelp_npv_sub=ggplot(cc_diffusion_real_sub, aes(x=ModelParam01, y=NPV))+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+
+```
+
+```{r}
+grid.arrange(modelp_npv,modelp_npv_sub,  ncol = 2)
+```
+
+
+
+
+```{r}
+modelp_npv_RNN=ggplot(cc_diffusion_real_RNN, aes(x=ModelParam01, y=NPV))+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+
+modelp_npv_sub_RNN=ggplot(cc_diffusion_real_sub_RNN, aes(x=ModelParam01, y=NPV))+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+
+```
+
+```{r}
+grid.arrange(modelp_npv_RNN,modelp_npv_sub_RNN,  ncol = 2)
+```
+
+
+
+
+```{r}
+npv_net=ggplot(cc_diffusion_real, aes(x=NetType,y=NPV,  fill=NetSource)) + 
+    geom_boxplot()+
+    xlab("Network Type")+
+    ylab("NPV")+
+    theme(text = element_text(size = 20))+
+    theme(legend.position="none")
+
+npv_net_sub=ggplot(cc_diffusion_real_sub, aes(x=NetSource,y=NPV,  fill=NetSource)) + 
+    geom_boxplot()+
+    xlab("Network Type")+
+    ylab("NPV")+
+    theme(text = element_text(size = 20))+
+    theme(legend.position="none")
+
+```
+
+
+```{r}
+npv_net_RNN=ggplot(cc_diffusion_real_RNN, aes(x=NetSource,y=NPV,  fill=NetSource)) + 
+    geom_boxplot()+
+    xlab("Network Type")+
+    ylab("NPV")+
+    theme(text = element_text(size = 20))+
+    theme(legend.position="none")
+
+npv_net_sub_RNN=ggplot(cc_diffusion_real_sub_RNN, aes(x=NetSource,y=NPV,  fill=NetSource)) + 
+    geom_boxplot()+
+    xlab("Network Type")+
+    ylab("NPV")+
+    theme(text = element_text(size = 20))+
+    theme(legend.position="none")
+```
+
+
+
+```{r}
+grid.arrange(npv_model,modelp_npv,npv_model_sub,modelp_npv_sub,  ncol = 2,nrow=2)
+```
+
+
+```{r}
+grid.arrange(npv_model_RNN,modelp_npv_RNN,npv_model_sub_RNN,modelp_npv_sub_RNN,  ncol = 2,nrow=2)
+```
+
+
+
+
+```{r}
+grid.arrange(npv_model,npv_net,npv_model_sub, npv_net_sub,  ncol = 2,nrow=2)
+```
+
+
+
+```{r}
+grid.arrange(npv_model_RNN,npv_net_RNN,npv_model_sub_RNN, npv_net_sub_RNN,  ncol = 2,nrow=2)
+```
+
+
+
+
+```{r}
+cc_npv_sub=ggplot(cc_diffusion_real_sub, aes(x=CC_mean, y=NPV))+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+npv_model_sub=ggplot(cc_diffusion_real_sub, aes(x=Model,y=NPV,  fill=Model))+     xlab("Model")+
+    ylab("NPV")+
+    geom_boxplot()+
+    theme(legend.position="none")+
+    theme(text = element_text(size = 20))
+grid.arrange(cc_npv_sub,npv_model_sub,  ncol = 2)
+```
+
+
+
+```{r}
+npv_model_final=ggplot(cc_diffusion_real, aes(x=Model,y=FinalInf,  fill=Model))+     xlab("Model")+
+    ylab("Final Infection")+
+    geom_boxplot()+
+    theme(legend.position="none")+
+    theme(text = element_text(size = 20))
+
+npv_net_final=ggplot(cc_diffusion_real, aes(x=NetType,y=FinalInf,  fill=NetType))+     xlab("Network Type")+
+    ylab("Final Infection")+
+    geom_boxplot()+
+    theme(legend.position="none")+
+    theme(text = element_text(size = 20))
+
+npv_model_final_sub=ggplot(cc_diffusion_real_sub, aes(x=Model,y=FinalInf,  fill=Model))+     xlab("Model")+
+    ylab("Final Infection")+
+    geom_boxplot()+
+    theme(legend.position="none")+
+    theme(text = element_text(size = 20))
+
+npv_net_final_sub=ggplot(cc_diffusion_real_sub, aes(x=NetType,y=FinalInf,  fill=NetType))+     xlab("Network Type")+
+    ylab("Final Infection")+
+    geom_boxplot()+
+    theme(legend.position="none")+
+    theme(text = element_text(size = 20))
+```
+
+
+```{r}
+grid.arrange(npv_model_final,npv_net_final,
+             npv_model_final_sub,npv_net_final_sub,
+             ncol = 2,nrow=2)
+```
+
+
+```{r}
+grid.arrange(cc_npv,npv_model,cc_npv_sub,npv_model_sub,  ncol = 2,nrow=2)
+```
+
+
+#visualize the relationships between the logit of clustering coefficient and network type
+```{r}
+full_data=ggplot(cc_diffusion_real, aes(x=CC_mean, y=NPV, shape=Model, color=Model))+
+  facet_grid(Model~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+full_data
+```
+
+#visualize the relationships between the logit of clustering coefficient and network type
+```{r}
+ggplot(cc_diffusion_real, aes(x=ModelParam, y=NPV,color=Model))+
+  facet_grid(Model~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Model Parameter")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+```
+
+```{r}
+net_param=ggplot(cc_diffusion_real, aes(x=NetParam, y=CC_mean,color=NetType))+
+  facet_grid(NetType~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Network Parameter")+
+  ylab("Clustering Coefficient")+
+  theme(legend.position="none")
+```
+
+
+```{r}
+full_data_finit=ggplot(cc_diffusion_real, aes(x=CC_mean, y=FinalInf, shape=Model, color=Model))+
+  facet_grid(Model~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("Final Infection")+
+  theme(legend.position="none")
+#full_data_finit
+
+```
+
+
+```{r}
+grid.arrange(full_data_finit, net_param, ncol = 2)
+```
+
+
+```{r}
+full_data_finit_new=ggplot(cc_diffusion_real, aes(x=CC_mean, y=FinalInf, shape=Model, color=Model))+
+  facet_grid( NetType~Model)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("Final Infection")+
+  theme(legend.position="none")
+
+
+full_data_npv_new=ggplot(cc_diffusion_real, aes(x=CC_mean, y=NPV, shape=Model, color=Model))+
+  facet_grid( NetType~Model)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+```
+
+
+```{r}
+grid.arrange(full_data_npv_new, full_data_finit_new, ncol = 2)
+```
+
+
+```{r}
+grid.arrange(full_data, net_param, ncol = 2)
+```
+
+
+#visualize the relationships between the logit of clustering coefficient and network type
+```{r}
+non_zero=ggplot(cc_diffusion_real_sub, aes(x=CC_mean, y=NPV, shape=Model, color=Model))+
+  facet_grid(Model~ .)+
+  geom_point()+ 
+  theme(text = element_text(size = 20)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Clustering Coefficient")+
+  ylab("NPV")+
+  theme(legend.position="none")
+
+non_zero
+```
+
+```{r}
+ grid.arrange(full_data, non_zero, ncol = 2)
+```
+
+
+
+```{r}
+ggplot(cc_diffusion_real, aes(x =NPV )) +
+  geom_histogram()+ #+ggtitle("Histogram of Net Present Value (NPV)")+
+  theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+xlab("NPV")+
+  theme(legend.position="none")
+```
+
+```{r}
+cc_diffusion_real_zero=cc_diffusion_real[cc_diffusion_real$NPV==0,]
+pie_data_cc=table(cc_diffusion_real_zero$Model)
+pie_data_cc
+```
+
+```{r}
+cc_diffusion_real_zero_RNN=cc_diffusion_real_RNN[cc_diffusion_real_RNN$NPV==0,]
+pie_data_cc_RNN=table(cc_diffusion_real_zero_RNN$Model)
+pie_data_cc_RNN
+```
+
+
+
+
+#visualize 0 by model
+```{r}
+#Cluster One
+
+cc_pie_zero=as.data.frame(pie_data_cc)
+cc_pie_zero$pct=round(cc_pie_zero$Freq/(sum(cc_pie_zero$Freq)),2)
+cc_pie_zero$labels= scales::percent(cc_pie_zero$pct)
+colnames(cc_pie_zero)[colnames(cc_pie_zero) == "Var1"] <- "Model"
+
+ggplot(cc_pie_zero, aes(x = "", y = pct, fill = Model)) +
+  geom_col() +
+  geom_text(aes(label = labels),size=10,
+            position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y")+ggtitle("")+theme(plot.title = element_text(hjust = 0.5))+
+  theme(text=element_text(size = 20))
+```
+
+```{r}
+
+ggplot(data=cc_pie_zero, aes(x=Model, y=Freq)) +
+  geom_bar(stat="identity", fill="steelblue")+
+  geom_text(aes(label=Freq), vjust=-0.3)+ 
+  theme(text=element_text(size = 20))
+#+theme_minimal()
+```
+
+
+
+```{r}
+cc_pie_zero_RNN=as.data.frame(pie_data_cc_RNN)
+cc_pie_zero_RNN$pct=round(cc_pie_zero_RNN$Freq/(sum(cc_pie_zero_RNN$Freq)),2)
+cc_pie_zero_RNN$labels= scales::percent(cc_pie_zero_RNN$pct)
+colnames(cc_pie_zero_RNN)[colnames(cc_pie_zero_RNN) == "Var1"] <- "Model"
+
+ggplot(cc_pie_zero_RNN, aes(x = "", y = pct, fill = Model)) +
+  geom_col() +
+  geom_text(aes(label = labels),size=10,
+            position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y")+ggtitle("")+theme(plot.title = element_text(hjust = 0.5))+
+  theme(text=element_text(size = 20))
+```
+
+
+```{r}
+ggplot(data=cc_pie_zero_RNN, aes(x=Model, y=Freq)) +
+  geom_bar(stat="identity", fill="steelblue")+
+  geom_text(aes(label=Freq), vjust=-0.3)+ 
+  theme(text=element_text(size = 20))
+```
+
+
+
+
+
+#visualize the InitInf by network type for subset data where NPV==0
+```{r}
+
+  ggplot(cc_diffusion_real_sub, aes(x = InitInf,fill=NetType,color=NetType)) +
+  geom_histogram(bins=100)+ #+ggtitle("Initial Infection by Newtowrk NPV=0")+
+  facet_grid(NetType ~ .)+ theme(text = element_text(size = 14)) +theme(plot.title = element_text(hjust = 0.5))+xlab("Initial Infection")+
+  theme(legend.position="none")
+```
+
+#visualize the Model parameters by network type for subset data where NPV==0
+```{r}
+ ggplot(cc_diffusion_real_sub, aes(x = ModelParam,fill=NetType,color=NetType)) +
+  geom_histogram(bins=100) +
+  facet_wrap(NetType ~ .,scale="free")+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+xlab("Model Parameter")+
+  theme(legend.position="none")
+```
+
+
+#visualize the Model parameters by network type for subset data where NPV==0
+```{r}
+ ggplot(cc_diffusion_real_sub, aes(x = InitInf,fill=NetType,color=NetType)) +
+  geom_histogram(bins=100) +
+  facet_wrap(NetType ~ .)+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+xlab("Initial Infection")+
+  theme(legend.position="none")
+```
+
+#visualize the Model parameters by network type for subset data where NPV==0
+```{r}
+ ggplot(cc_diffusion_real_sub, aes(x = InitInf,fill=Model,color=Model)) +
+  geom_histogram(bins=100) +
+  facet_wrap(Model ~ .)+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+xlab("Initial Infection")+
+  theme(legend.position="none")
+```
+
+
+
+#visualize the Model parameters by network type for subset data where NPV==0
+```{r}
+ ggplot(cc_diffusion_real_sub, aes(x = ModelParam,fill=Model,color=Model)) +
+  geom_histogram(bins=100) +
+  facet_wrap(Model ~ .)+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+xlab("Model Parameter")+
+  theme(legend.position="none")
+```
+
+
+
+
+#visualize the Model parameters by network type for full data all NPV
+```{r}
+ ggplot(cc_diffusion_real, aes(x = ModelParam,fill=NetType,color=NetType)) +
+  geom_histogram(bins=100) +xlab("Model Parameter")+
+  facet_wrap(NetType ~ .,scale="free")+ theme(text = element_text(size = 15)) +theme(plot.title = element_text(hjust = 0.5))+
+  theme(legend.position="none")
+```
+#visualize the Model parameters by model type for full data all NPV
+
+```{r}
+
+ ggplot(cc_diffusion_real, aes(x = ModelParam,fill=Model,color=Model)) +
+  geom_histogram(bins=100) +xlab("Model Parameter")+
+  facet_wrap(Model ~ .,scales = "free")+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+
+  theme(legend.position="none")
+```
+#visualize the Model parameters for ICM model for full data all NPV
+```{r}
+ ggplot(cc_diffusion_real[cc_diffusion_real$Model=="ICM",] ,aes(x = ModelParam) )+
+  geom_histogram(bins=100) + theme(text = element_text(size = 15)) +theme(plot.title = element_text(hjust = 0.5))+
+  theme(legend.position="none")
+```
+#visualize the histogram of Model parameters by model type for full data all NPV and subset data NPV==0
+############needs update the ylim
+########################
+```{r}
+model_name=c("ICM","LATM","LFTM" )
+model_parameter_fdata = list()
+model_parameter_sub=list()
+for (m_name in model_name){
+  # if (m_name=="ICM" || m_name=="LFTM"){
+  #   low_lim=0
+  #   upper_lim=1
+  # }
+  # if (m_name=="LATM"){
+  #   low_lim=1
+  #   upper_lim=10
+  # }
+  model_parameter_fdata[[m_name]]=ggplot( cc_diffusion_real[cc_diffusion_real$Model==m_name,],aes(x =  ModelParam01)) +
+    geom_histogram(bins=100) + 
+    theme(text = element_text(size = 20)) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    xlab("Model Parameter") +xlim(low_lim,upper_lim)+
+    ggtitle(paste0("All NPV  ",m_name)) +
+    theme(legend.position="none")
+  
+  ##remove zero
+  model_parameter_sub[[m_name]]=ggplot(cc_diffusion_real_sub[cc_diffusion_real_sub$Model==m_name,] ,aes(x =    
+    ModelParam)) +
+    geom_histogram(bins=100) + 
+    theme(text = element_text(size = 20)) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    xlab("Model Parameter") +xlim(low_lim,upper_lim)+
+    ggtitle(paste0(" NPV > 0  ",m_name)) +
+    theme(legend.position="none")
+  
+  
+   grid.arrange(model_parameter_fdata[[m_name]], model_parameter_sub[[m_name]], ncol = 2)
+}
+```
+
+
+```{r}
+model_name=c("ICM","LATM","LFTM" )
+model_parameter_fdata = list()
+model_parameter_sub=list()
+for (m_name in model_name){
+  # if (m_name=="ICM" || m_name=="LFTM"){
+  #   low_lim=0
+  #   upper_lim=1
+  # }
+  # if (m_name=="LATM"){
+  #   low_lim=1
+  #   upper_lim=10
+  # }
+  model_parameter_fdata[[m_name]]=ggplot( cc_diffusion_real_RNN[cc_diffusion_real_RNN$Model==m_name,],aes(x =  ModelParam01)) +
+    geom_histogram(bins=100) + 
+    theme(text = element_text(size = 20)) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    xlab("Model Parameter") +xlim(low_lim,upper_lim)+
+    ggtitle(paste0("All NPV  ",m_name)) +
+    theme(legend.position="none")
+  
+  ##remove zero
+  model_parameter_sub[[m_name]]=ggplot(cc_diffusion_real_sub_RNN[cc_diffusion_real_sub_RNN$Model==m_name,] ,aes(x =    
+    ModelParam)) +
+    geom_histogram(bins=100) + 
+    theme(text = element_text(size = 20)) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    xlab("Model Parameter") +xlim(low_lim,upper_lim)+
+    ggtitle(paste0(" NPV > 0  ",m_name)) +
+    theme(legend.position="none")
+  
+  
+   grid.arrange(model_parameter_fdata[[m_name]], model_parameter_sub[[m_name]], ncol = 2)
+}
+```
+
+
+
+
+
+
+
+#visualize the Model parameters for LATM model for full data all NPV
+
+```{r}
+ggplot(cc_diffusion_real[cc_diffusion_real$Model=="LATM",] ,aes(x = ModelParam) )+
+  geom_histogram(bins=100) + theme(text = element_text(size = 15)) +theme(plot.title = element_text(hjust = 0.5))+xlab("Model Parameter")+ggtitle(paste0("Histogram of Model Parameter for All NPV LATM "))+
+  theme(legend.position="none")
+```
+#visualize the Model parameters for LATM for subset data NPV==0
+```{r}
+ggplot(cc_diffusion_real_sub[cc_diffusion_real_sub$Model=="LATM",] ,aes(x = ModelParam) )+
+  geom_histogram(bins=100) + theme(text = element_text(size = 15)) +theme(plot.title = element_text(hjust = 0.5))+ggtitle("Histogram of Model Parameters for NPV not 0")+
+  theme(legend.position="none")
+```
+
+#Visuzlie the relationship of IniInf and Model parameter for subset data NPV==0
+
+```{r}
+ggplot(cc_diffusion_real_sub, aes(x=InitInf, y=ModelParam,color=Model))+
+  geom_point()+xlab("Initial Infection")+ylab("Model Parameter")+
+  facet_wrap(Model~.,scales="free")+ theme(text = element_text(size = 20))+theme(legend.position="none")+theme(plot.title = element_text(hjust = 0.5))#+ggtitle("NPV = 0")
+
+```
+
+#Visuzlie the relationship of IniInf and Model parameter for subset data NPV>0
+
+```{r}
+ggplot(cc_diffusion_real_sub, aes(x=InitInf, y=ModelParam,color=Model))+
+  geom_point()+xlab("Initial Infection")+ylab("Model Parameter")+
+  facet_grid(Model~.,scales="free")+ theme(text = element_text(size = 20)) +theme(legend.position="none")+ggtitle("NPV  Greater than 0")+theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+
+#Visuzlie the relationship of IniInf and Model parameter for subset data NPV>0
+#histogram
+```{r}
+ggplot(cc_diffusion_real_sub, aes(x=InitInf*ModelParam,color=Model))+
+  geom_histogram(bins=100)+xlab("Initial Infection * Model Parameter")+
+  #facet_wrap(Model~.,scales="free")+ theme(text = element_text(size = 20))
+ facet_wrap(Model~.)+ theme(text = element_text(size = 20))+theme(legend.position="none")+ggtitle("NPV > 0")+theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+#Visuzlie the relationship of IniInf and Model parameter for subset data NPV>0
+#histogram
+```{r}
+ggplot(cc_diffusion_real_sub, aes(x=InitInf*ModelParam,color=Model))+
+  geom_histogram(bins=100)+xlab("Initial Infection * Model Parameter")+ylab("Value")+
+  facet_wrap(Model~.)+ theme(text = element_text(size = 20)) +theme(legend.position="none")+ggtitle("NPV > 0")+theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+#visualize NPV by model for NPV not equal to 0
+```{r}
+ ggplot(cc_diffusion_real_sub, aes(x = NPV,fill=Model,color=Model)) +
+  geom_histogram(bins=100) +xlab("Net Present Value (NPV)")+
+  facet_grid(Model ~ .)+ theme(text = element_text(size = 20)) +theme(plot.title = element_text(hjust = 0.5))+#+ggtitle("Histogram of NPV by Model Non-Zero NPV")+
+  theme(legend.position="none")
+```
+
+#visualize NPV by network type for NPV not equal to 0
+```{r}
+ ggplot(cc_diffusion_real_sub, aes(x = NPV,fill=NetType,color=NetType)) +
+  geom_histogram() +xlab("Net Present Value (NPV)")+
+  facet_grid(NetType ~ .)+ theme(text = element_text(size = 13)) +theme(plot.title = element_text(hjust = 0.5))+ggtitle("Histogram of NPV by Network Type Non-Zero NPV")+
+  theme(legend.position="none")
+```
+#visualize NPV by network type and Model NPV not equal to 0
+```{r}
+ ggplot(cc_diffusion_real_sub, aes(x = NPV,fill=NetType,color=NetType)) +
+  geom_histogram(bins=100) +xlab("Net Present Value (NPV)")+
+  facet_grid(NetType ~ Model)+ theme(text = element_text(size = 13.5)) +theme(plot.title = element_text(hjust = 0.5))+ggtitle(" NPV > 0")+
+  theme(legend.position="none")
+```
+
+
+
+
+#check the number of minimum value of non zero NPV
+```{r}
+number_of_one=sum(cc_diffusion_real_sub$NPV==min(cc_diffusion_real_sub$NPV))
+number_of_one
+```
+
+#check the proportion of minimum value of non zero NPV
+```{r}
+number_of_one/(dim(cc_diffusion_real_sub)[1])
+```
+
+
+
+#NPV 171.1858,176.5279
+```{r}
+mean(cc_diffusion_real_sub[cc_diffusion_real_sub$NetType=="RO",8])
+```
+
+```{r}
+mean(cc_diffusion_real_sub[cc_diffusion_real_sub$NetType=="HU",8])
+```
+
+
+#Final Infection 0.4031599,0.4153603
+```{r}
+mean(cc_diffusion_real_sub[cc_diffusion_real_sub$NetType=="RO",9])
+mean(cc_diffusion_real_sub[cc_diffusion_real_sub$NetType=="HU",9])
+```
+
+
+
+#reference level
+```{r}
+
+cc_diffusion_real_sub$Model= relevel(as.factor(cc_diffusion_real_sub$Model), ref="LFTM")
+cc_diffusion_real_sub$NetType= relevel(as.factor(cc_diffusion_real_sub$NetSource), ref="RO")
+```
+
+
+
+```{r}
+colnames(cc_diffusion_real_sub)
+```
+
+
+```{r}
+colnames(cc_diffusion_real_sub_RNN)
+```
+
+
+
+```{r}
+model_build_step <- function (real_data_set) {
+  #base model: just cc
+  cc_npv=gam(NPV~s(CC_mean),data=real_data_set)
+  summary(cc_npv)
+  cc_npv_model=getViz(cc_npv)
+  print(plot(cc_npv_model, allTerms = T), pages = 1)
+  
+  cc_final=gam(FinalInf~s(CC_mean),data=real_data_set)
+  summary(cc_final)
+  cc_final_model=getViz(cc_final)
+  print(plot(cc_final_model, allTerms = T), pages = 1)
+  
+  #cc by network and model type
+  cc_npv_modelby=gam(NPV~s(CC_mean)+Model+NetSource+s(CC_mean,by=Model)+s(CC_mean,by=NetSource),data=real_data_set)
+  summary(cc_npv_modelby)
+  cc_npv_model_byplot=getViz(cc_npv_modelby)
+  print(plot(cc_npv_model_byplot, allTerms = T), pages = 1)
+  
+  cc_final_modelby=gam(FinalInf~s(CC_mean)+Model+NetSource+s(CC_mean,by=Model)+s(CC_mean,by=NetSource),data=real_data_set)
+  summary(cc_final_modelby)
+  cc_final_model_byplot=getViz(cc_final_modelby)
+  print(plot(cc_final_model_byplot, allTerms = T), pages = 1)
+  
+  
+  ##base model just use model parameters
+  para_npv=gam(NPV~s(ModelParam01),data=real_data_set)
+  summary(para_npv)
+  para_npv_model=getViz(para_npv)
+  print(plot(para_npv_model, allTerms = T), pages = 1)
+  
+  para_final=gam(FinalInf~s(ModelParam01),data=real_data_set)
+  summary(para_final)
+  para_final_model=getViz(para_final)
+  print(plot(para_final_model, allTerms = T), pages = 1)
+  
+  #para by network and model type
+   para_npv_modelby=gam(NPV~s(ModelParam01)+Model+NetSource+s(ModelParam01,by=Model),data=real_data_set)
+  summary(para_npv_modelby)
+  cc_npv_model_byplot=getViz(para_npv_modelby)
+  print(plot(para_npv_model_byplot, allTerms = T), pages = 1)
+  
+  para_final_modelby=gam(FinalInf~s(ModelParam01)+Model+NetSource+s(ModelParam01,by=Model),data=real_data_set)
+  summary(para_final_modelby)
+  para_final_model_byplot=getViz(para_final_modelby)
+  print(plot(para_final_model_byplot, allTerms = T), pages = 1)
+  
+  
+  ##full model including interactions
+  cc_npv_fll=gam(NPV~s(CC_mean)+Model+NetSource+s(CC_mean,by=Model)+s(CC_mean,by=NetSource)+
+                s(ModelParam01)+s(ModelParam01,by=Model)+s(ModelParam01,CC_mean),data=real_data_set)
+  summary(cc_npv_modelby)
+  cc_npv_model_byplot=getViz(cc_npv_modelby)
+  print(plot(cc_npv_model_byplot, allTerms = T), pages = 1)
+  
+  final_model_full=gam(FinalInf~s(CC_mean)+Model+NetSource+s(CC_mean,by=Model)+s(CC_mean,by=NetSource)+
+                      s(ModelParam01)+s(ModelParam01,by=Model)+s(ModelParam01,CC_mean),data=real_data_set)
+  summary(final_model_full)
+  final_model_full_plot=getViz(final_model_full)
+  print(plot(final_model_full_plot, allTerms = T), pages = 1)
+
+}
+```
+
+
+
+```{r}
+model_build_step (cc_diffusion_real_sub)
+```
+
+```{r}
+library(ggplot2)
+library(mgcv)
+library(mgcViz)
+```
+
+
+```{r}
+cc_diffusion_real=read.csv("RealDFSData_CCDiffusion_OrientedParams01.csv")
+cc_diffusion_real_RNN=read.csv("RealRNNData_CCDiffusion_OrientedParams01.csv")
+
+cc_diffusion_real$NetSource[cc_diffusion_real$NetSource == "facebook_combined_edges"] <- 'FBC'
+cc_diffusion_real$NetSource[cc_diffusion_real$NetSource == "HR_edges"] <- 'HR'
+cc_diffusion_real$NetSource[cc_diffusion_real$NetSource == "HU_edges"] <- 'HU'
+cc_diffusion_real$NetSource[cc_diffusion_real$NetSource == "large_twitch_edges"] <- 'LT'
+cc_diffusion_real$NetSource[cc_diffusion_real$NetSource == "musae_facebook_edges"] <- 'MFB'
+cc_diffusion_real$NetSource[cc_diffusion_real$NetSource == "RO_edges"] <- 'RO'
+
+cc_diffusion_real_RNN$NetSource[cc_diffusion_real_RNN$NetSource == "HR_edges"] <- 'HR'
+cc_diffusion_real_RNN$NetSource[cc_diffusion_real_RNN$NetSource == "HU_edges"] <- 'HU'
+cc_diffusion_real_RNN$NetSource[cc_diffusion_real_RNN$NetSource == "large_twitch_edges"] <- 'LT'
+cc_diffusion_real_RNN$NetSource[cc_diffusion_real_RNN$NetSource == "musae_facebook_edges"] <- 'MFB'
+cc_diffusion_real_RNN$NetSource[cc_diffusion_real_RNN$NetSource == "RO_edges"] <- 'RO'
+
+cc_diffusion_real_sub=cc_diffusion_real[cc_diffusion_real$NPV!=0,]
+cc_diffusion_real_sub_RNN=cc_diffusion_real_RNN[cc_diffusion_real_RNN$NPV!=0,]
+
+cc_diffusion_real_sub$Model= relevel(as.factor(cc_diffusion_real_sub$Model), ref="LFTM")
+cc_diffusion_real_sub$NetType= relevel(as.factor(cc_diffusion_real_sub$NetSource), ref="RO")
+```
+
+
+
+
+```{r}
+ #base model: just cc
+  cc_npv=gam(NPV~s(CC_mean),data=cc_diffusion_real_sub)
+  summary(cc_npv)
+  cc_npv_model=getViz(cc_npv)
+  #print(plot(cc_npv_model, allTerms = T), pages = 1)
+  
+  cc_final=gam(FinalInf~s(CC_mean),data=cc_diffusion_real_sub)
+  summary(cc_final)
+  cc_final_model=getViz(cc_final)
+  #print(plot(cc_final_model, allTerms = T), pages = 1)
+  
+  #cc by network and model type
+  cc_npv_modelby=gam(NPV~s(CC_mean)+Model+NetSource+s(CC_mean,by=Model)+s(CC_mean,by=NetSource),data=cc_diffusion_real_sub)
+  summary(cc_npv_modelby)
+  cc_npv_model_byplot=getViz(cc_npv_modelby)
+  #print(plot(cc_npv_model_byplot, allTerms = T), pages = 1)
+  
+  cc_final_modelby=gam(FinalInf~s(CC_mean)+Model+NetSource+s(CC_mean,by=Model)+s(CC_mean,by=NetSource),data=cc_diffusion_real_sub)
+  summary(cc_final_modelby)
+  cc_final_model_byplot=getViz(cc_final_modelby)
+  #print(plot(cc_final_model_byplot, allTerms = T), pages = 1)
+  
+  
+  ##base model just use model parameters
+  para_npv=gam(NPV~s(ModelParam01),data=cc_diffusion_real_sub)
+  summary(para_npv)
+  para_npv_model=getViz(para_npv)
+  #print(plot(para_npv_model, allTerms = T), pages = 1)
+  
+  para_final=gam(FinalInf~s(ModelParam01),data=cc_diffusion_real_sub)
+  summary(para_final)
+  para_final_model=getViz(para_final)
+  #print(plot(para_final_model, allTerms = T), pages = 1)
+  
+  #para by network and model type
+   para_npv_modelby=gam(NPV~s(ModelParam01)+Model+NetSource+s(ModelParam01,by=Model),data=cc_diffusion_real_sub)
+  summary(para_npv_modelby)
+  cc_npv_model_byplot=getViz(para_npv_modelby)
+  #print(plot(para_npv_model_byplot, allTerms = T), pages = 1)
+  
+  para_final_modelby=gam(FinalInf~s(ModelParam01)+Model+NetSource+s(ModelParam01,by=Model),data=cc_diffusion_real_sub)
+  summary(para_final_modelby)
+  para_final_model_byplot=getViz(para_final_modelby)
+  #print(plot(para_final_model_byplot, allTerms = T), pages = 1)
+  
+  
+  ##full model including interactions
+  cc_npv_fll=gam(NPV~s(CC_mean)+Model+NetSource+s(CC_mean,by=Model)+s(CC_mean,by=NetSource)+
+                s(ModelParam01)+s(ModelParam01,by=Model)+s(ModelParam01,CC_mean),data=cc_diffusion_real_sub)
+  summary(cc_npv_modelby)
+  cc_npv_model_byplot=getViz(cc_npv_modelby)
+  #print(plot(cc_npv_model_byplot, allTerms = T), pages = 1)
+  
+  final_model_full=gam(FinalInf~s(CC_mean)+Model+NetSource+s(CC_mean,by=Model)+s(CC_mean,by=NetSource)+
+                      s(ModelParam01)+s(ModelParam01,by=Model)+s(ModelParam01,CC_mean),data=cc_diffusion_real_sub)
+  summary(final_model_full)
+  final_model_full_plot=getViz(final_model_full)
+  #print(plot(final_model_full_plot, allTerms = T), pages = 1)
+```
+
+
+```{r}
+#base model: just cc
+  cc_npv_RNN=gam(NPV~s(CC_mean),data=cc_diffusion_real_sub_RNN)
+  summary(cc_npv_RNN)
+  cc_npv_model_RNN=getViz(cc_npv_RNN)
+  #print(plot(cc_npv_model_RNN, allTerms = T), pages = 1)
+  
+  cc_final_RNN=gam(FinalInf~s(CC_mean),data=cc_diffusion_real_sub_RNN)
+  summary(cc_final_RNN)
+  cc_final_model_RNN=getViz(cc_final_RNN)
+  #print(plot(cc_final_model_RNN, allTerms = T), pages = 1)
+  
+  #cc by network and model type
+  cc_npv_modelby_RNN=gam(NPV~s(CC_mean)+Model+NetSource+s(CC_mean,by=Model)+s(CC_mean,by=NetSource),data=cc_diffusion_real_sub_RNN)
+  summary(cc_npv_modelby_RNN)
+  cc_npv_model_byplot_RNN=getViz(cc_npv_modelby_RNN)
+  #print(plot(cc_npv_model_byplot_RNN, allTerms = T), pages = 1)
+  
+  cc_final_modelby_RNN=gam(FinalInf~s(CC_mean)+Model+NetSource+s(CC_mean,by=Model)+s(CC_mean,by=NetSource),data=cc_diffusion_real_sub_RNN)
+  summary(cc_final_modelby_RNN)
+  cc_final_model_byplot_RNN=getViz(cc_final_modelby_RNN)
+  #print(plot(cc_final_model_byplot_RNN, allTerms = T), pages = 1)
+  
+  
+  ##base model just use model parameters
+  para_npv_RNN=gam(NPV~s(ModelParam01),data=cc_diffusion_real_sub_RNN)
+  summary(para_npv_RNN)
+  para_npv_model_RNN=getViz(para_npv_RNN)
+  #print(plot(para_npv_model_RNN, allTerms = T), pages = 1)
+  
+  para_final_RNN=gam(FinalInf~s(ModelParam01),data=cc_diffusion_real_sub_RNN)
+  summary(para_final_RNN)
+  para_final_model_RNN=getViz(para_final_RNN)
+  #print(plot(para_final_model_RNN, allTerms = T), pages = 1)
+  
+  #para by network and model type
+   para_npv_modelby_RNN=gam(NPV~s(ModelParam01)+Model+NetSource+s(ModelParam01,by=Model),data=cc_diffusion_real_sub_RNN)
+  summary(para_npv_modelby_RNN)
+  cc_npv_model_byplot_RNN=getViz(para_npv_modelby_RNN)
+  #print(plot(para_npv_model_byplot_RNN, allTerms = T), pages = 1)
+  
+  para_final_modelby_RNN=gam(FinalInf~s(ModelParam01)+Model+NetSource+s(ModelParam01,by=Model),data=cc_diffusion_real_sub_RNN)
+  summary(para_final_modelby_RNN)
+  para_final_model_byplot_RNN=getViz(para_final_modelby_RNN)
+  #print(plot(para_final_model_byplot_RNN, allTerms = T), pages = 1)
+  
+  
+  ##full model including interactions
+  cc_npv_fll_RNN=gam(NPV~s(CC_mean)+Model+NetSource+s(CC_mean,by=Model)+s(CC_mean,by=NetSource)+
+                s(ModelParam01)+s(ModelParam01,by=Model)+s(ModelParam01,CC_mean),data=cc_diffusion_real_sub_RNN)
+  summary(cc_npv_modelby_RNN)
+  cc_npv_model_byplot_RNN=getViz(cc_npv_modelby_RNN)
+  #print(plot(cc_npv_model_byplot_RNN, allTerms = T), pages = 1)
+  
+  final_model_full_RNN=gam(FinalInf~s(CC_mean)+Model+NetSource+s(CC_mean,by=Model)+s(CC_mean,by=NetSource)+s(ModelParam01)+s(ModelParam01,by=Model)+s(ModelParam01,CC_mean),data=cc_diffusion_real_sub_RNN)
+  summary(final_model_full_RNN)
+  final_model_full_plot_RNN=getViz(final_model_full_RNN)
+  #print(plot(final_model_full_plot_RNN, allTerms = T), pages = 1)
+```
+
+
+
+```{r}
+model_build_step (cc_diffusion_real_sub_RNN)
+```
+
+
+#base model just cc
+```{r}
+cc_npv=gam(NPV~s(CC_mean),data=cc_diffusion_real_sub)
+summary(cc_npv)
+```
+
+
+```{r}
+library(mgcViz)
+cc_npv_model=getViz(cc_npv)
+print(plot(cc_npv_model, allTerms = T), pages = 1)
+```
+
+#add model
+```{r}
+cc_npv_modeltype=gam(NPV~s(CC_mean)+Model,data=cc_diffusion_real_sub)
+summary(cc_npv_modeltype)
+```
+
+
+```{r}
+cc_npv_modeltype_model=getViz(cc_npv_modeltype)
+print(plot(cc_npv_modeltype_model, allTerms = T), pages = 1)
+```
+
+#add network type
+```{r}
+cc_npv_modelnettype=gam(NPV~s(CC_mean)+Model+NetType,data=cc_diffusion_real_sub)
+summary(cc_npv_modelnettype)
+```
+
+
+```{r}
+cc_npv_modelnettype_model=getViz(cc_npv_modelnettype)
+print(plot(cc_npv_modelnettype_model, allTerms = T), pages = 1)
+```
+
+#add parameters
+
+
+```{r}
+library(mgcv)
+cc_npv_modelpar=gam(NPV~s(CC_mean)+s(ModelParam01)+s(CC_mean,ModelParam01)+Model+NetType,data=cc_diffusion_real_sub)
+summary(cc_npv_modelpar)
+
+
+```
+
+
+```{r}
+
+cc_npv_modelpar_model=getViz(cc_npv_modelpar)
+print(plot(cc_npv_modelpar_model, allTerms = T), pages = 1)
+```
+
+
+
+
+#add initial infection
+```{r}
+cc_npv_modelpar_ini=gam(NPV~s(CC_mean)+s(ModelParam01)+s(CC_mean,ModelParam01)+Model+NetType+s(InitInf)+s(CC_mean,InitInf),data=cc_diffusion_real_sub)
+summary(cc_npv_modelpar_ini)
+```
+
+```{r}
+cc_npv_modelpar_ini_model=getViz(cc_npv_modelpar_ini)
+print(plot(cc_npv_modelpar_ini_model, allTerms = T), pages = 1)
+```
+#create word cloud
+```{r}
+# install.packages("wordcloud")
+# library(wordcloud)
+# install.packages("RColorBrewer")
+# library(RColorBrewer)
+# install.packages("wordcloud2")
+# library(wordcloud2)
+# install.packages("tm")
+# library(tm)
+
+
+```
+
+```{r}
+# top_words=read.csv("cleaned_top_words.csv")
+```
+
+
+
+```{r}
+# set.seed(1234) # for reproducibility 
+# wordcloud(words = top_words$Word, freq = top_words$Frequency, min.freq = 1,           max.words=200, random.order=FALSE, rot.per=0.35,            colors=brewer.pal(8, "Dark2"))
+```
+
