@@ -27,7 +27,7 @@ cc_diffusion_real_sub=cc_diffusion_real[cc_diffusion_real$NPV!=0,]
 cc_diffusion_real_sub_RNN=cc_diffusion_real_RNN[cc_diffusion_real_RNN$NPV!=0,]
 
 cc_diffusion_real_sub$Model= relevel(as.factor(cc_diffusion_real_sub$Model), ref="LFTM")
-cc_diffusion_real_sub$NetType= relevel(as.factor(cc_diffusion_real_sub$NetSource), ref="RO")
+cc_diffusion_real_sub$NetSource= relevel(as.factor(cc_diffusion_real_sub$NetSource), ref="RO")
 
 ###################
 #RF
